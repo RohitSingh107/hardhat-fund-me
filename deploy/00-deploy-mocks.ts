@@ -1,14 +1,14 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types"
 // import { DeployFunction } from "hardhat-deploy/types"
 
-// import {
-//     developementChain,
-//     DECIMALS,
-//     INITIAL_ANSWER,
-// } from "../helper-hardhat-config"
+import {
+    developmentChains,
+    DECIMALS,
+    INITIAL_PRICE,
+} from "../helper-hardhat-config"
 
-const DECIMALS = "18"
-const INITIAL_PRICE = "2000000000000000000000" // 2000
+// const DECIMALS = "18"
+// const INITIAL_PRICE = "2000000000000000000000" // 2000
 module.exports = async (hre: HardhatRuntimeEnvironment) => {
     const { deployments, getNamedAccounts, network } = hre
 
@@ -16,8 +16,8 @@ module.exports = async (hre: HardhatRuntimeEnvironment) => {
     const { deployer } = await getNamedAccounts()
     const chainId = network.config.chainId
 
-    // if (developementChain.includes(network.name)) {
-    if (chainId == 31337) {
+    if (developmentChains.includes(network.name)) {
+        // if (chainId == 31337) {
         log("Local Network Detected! Deploying Mocks...")
         await deploy("MockV3Aggregator", {
             contract: "MockV3Aggregator",
