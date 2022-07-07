@@ -18,12 +18,12 @@ contract FundMe {
     using PriceConverter for uint256;
     uint256 public constant MINIMUM_USD = 50 * 1e18;
 
-    address[] public funders;
-    mapping(address => uint256) public addressToAmount;
+    address[] private s_funders;
+    mapping(address => uint256) private s_addressToAmount;
 
-    address public immutable i_owner;
+    address private immutable i_owner;
 
-    AggregatorV3Interface public priceFeed;
+    AggregatorV3Interface private s_priceFeed;
 
     modifier onlyOwner() {
         // require(msg.sender == i_owner, "Sender is not owner!");
@@ -35,7 +35,7 @@ contract FundMe {
 
     constructor(address priceFeedAddress) {
         i_owner = msg.sender;
-        priceFeed = AggregatorV3Interface(priceFeedAddress);
+        s_priceFeed = AggregatorV3Interface(priceFeedAddress);
     }
 
     receive() external payable {
@@ -54,21 +54,21 @@ contract FundMe {
     function fund() public payable {
         // require(getConversionRate(msg.value) >= minimumUsd, "Ditn't send enough! reverting changes");
         require(
-            msg.value.getConversionRate(priceFeed) >= MINIMUM_USD,
+            msg.value.getConversionRate(s_priceFeed) >= MINIMUM_USD,
             "Ditn't send enough! reverting changes"
         );
-        funders.push(msg.sender);
-        addressToAmount[msg.sender] = msg.value;
+        s_funders.push(msg.sender);
+        s_addressToAmount[msg.sender] = msg.value;
     }
 
     function withdraw() public onlyOwner {
-        for (uint256 i = 0; i < funders.length; i++) {
-            address funder = funders[i];
-            addressToAmount[funder] = 0;
+        for (uint256 i = 0; i < s_funders.length; i++) {
+            address funder = s_funders[i];
+            s_addressToAmount[funder] = 0;
         }
 
         // Empty array with 0 elements;
-        funders = new address[](0);
+        s_funders = new address[](0);
 
         // // transfer
         // payable(msg.sender).transfer(address(this).balance);
@@ -83,5 +83,34 @@ contract FundMe {
         }("");
         require(callSuccess, "Call failed");
     }
+
+	function cheaperWithdraw() public payable onlyOwner {
+		address[] memory funders = s_funders;
+		for(uint256 funderIndex = 0; funderIndex < funders.length; funderIndex++){
+			address funder = funders[funderIndex];
+			s_addressToAmount[funder] = 0;
+		}
+
+		s_funders = new address[](0);
+		
+		(bool success, ) = i_owner.call{value: address(this).balance}("");
+		require(success);
+	}
+
+	function getOwner() public view returns(address){
+		return i_owner;
+	}
+
+	function getFunder(uint256 index) public view returns (address) {
+		return s_funders[index];
+	}
+
+	function getAddressToAmount(address funder) public view returns(uint256){
+		return s_addressToAmount[funder];
+	}
+
+	function getPriceFeed() public view returns (AggregatorV3Interface) {
+		return s_priceFeed;
+	}
 
 }

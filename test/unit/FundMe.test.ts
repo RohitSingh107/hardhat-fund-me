@@ -1,4 +1,4 @@
-import { deployments, ethers, getNamedAccounts } from "hardhat"
+import { deployments, ethers } from "hardhat"
 import { FundMe, MockV3Aggregator } from "../../typechain-types"
 import { assert, expect } from "chai"
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
@@ -19,7 +19,7 @@ describe("FundMe", () => {
 
     describe("constructor", () => {
         it("Sets the aggregator address correctly", async () => {
-            const response = await fundMe.priceFeed()
+            const response = await fundMe.getPriceFeed()
             assert.equal(response, mockV3Aggregator.address)
         })
     })
@@ -33,7 +33,7 @@ describe("FundMe", () => {
 
         it("updated the amount funded data structure", async () => {
             await fundMe.fund({ value: sendValue })
-            const response = await fundMe.addressToAmount(deployer.address)
+            const response = await fundMe.getAddressToAmount(deployer.address)
             assert.equal(
                 response.toString(),
                 ethers.utils.parseEther("1").toString()
@@ -42,7 +42,7 @@ describe("FundMe", () => {
 
         it("Adds funder to array of funders", async () => {
             await fundMe.fund({ value: sendValue })
-            const response = await fundMe.funders(0)
+            const response = await fundMe.getFunder(0)
             assert.equal(response, deployer.address)
         })
     })
@@ -61,6 +61,33 @@ describe("FundMe", () => {
             )
 
             const transactionResponse = await fundMe.withdraw()
+            const transactionReceipt = await transactionResponse.wait(1)
+            const { gasUsed, effectiveGasPrice } = transactionReceipt
+            const gasCost = gasUsed.mul(effectiveGasPrice)
+
+            const endingFundMeBalance = await ethers.provider.getBalance(
+                fundMe.address
+            )
+            const endingDeployerBalance = await ethers.provider.getBalance(
+                deployer.address
+            )
+
+            assert.equal(endingFundMeBalance.toString(), "0")
+            assert.equal(
+                startingFundMeBalance.add(startingDeployerBalance).toString(),
+                endingDeployerBalance.add(gasCost).toString()
+            )
+        })
+
+        it("CheaperWithdraw ETH from a single funder", async () => {
+            const startingFundMeBalance = await ethers.provider.getBalance(
+                fundMe.address
+            )
+            const startingDeployerBalance = await ethers.provider.getBalance(
+                deployer.address
+            )
+
+            const transactionResponse = await fundMe.cheaperWithdraw()
             const transactionReceipt = await transactionResponse.wait(1)
             const { gasUsed, effectiveGasPrice } = transactionReceipt
             const gasCost = gasUsed.mul(effectiveGasPrice)
@@ -110,12 +137,12 @@ describe("FundMe", () => {
                 endingDeployerBalance.add(gasCost).toString()
             )
 
-            await expect(fundMe.funders(0)).to.be.reverted
+            await expect(fundMe.getFunder(0)).to.be.reverted
 
             for (let i = 1; i < 6; i++) {
                 assert.equal(
                     (
-                        await fundMe.addressToAmount(account_list[i].address)
+                        await fundMe.getAddressToAmount(account_list[i].address)
                     ).toString(),
                     "0"
                 )
@@ -129,6 +156,49 @@ describe("FundMe", () => {
             await expect(attackConnectedContract.withdraw()).to.be.revertedWith(
                 "FundMe__NotOwner"
             )
+        })
+
+        it("cheaperWithdraw testing", async () => {
+            const account_list = await ethers.getSigners()
+            for (let i = 1; i < 6; i++) {
+                const funMeConnectedContract = fundMe.connect(account_list[i])
+                await funMeConnectedContract.fund({ value: sendValue })
+            }
+            const startingFundMeBalance = await ethers.provider.getBalance(
+                fundMe.address
+            )
+            const startingDeployerBalance = await fundMe.provider.getBalance(
+                deployer.address
+            )
+
+            const transactionResponse = await fundMe.cheaperWithdraw()
+            const transactionReceipt = await transactionResponse.wait(1)
+            const { gasUsed, effectiveGasPrice } = transactionReceipt
+            const gasCost = gasUsed.mul(effectiveGasPrice)
+
+            const endingFundMeBalance = await ethers.provider.getBalance(
+                fundMe.address
+            )
+            const endingDeployerBalance = await ethers.provider.getBalance(
+                deployer.address
+            )
+
+            assert.equal(endingFundMeBalance.toString(), "0")
+            assert.equal(
+                startingFundMeBalance.add(startingDeployerBalance).toString(),
+                endingDeployerBalance.add(gasCost).toString()
+            )
+
+            await expect(fundMe.getFunder(0)).to.be.reverted
+
+            for (let i = 1; i < 6; i++) {
+                assert.equal(
+                    (
+                        await fundMe.getAddressToAmount(account_list[i].address)
+                    ).toString(),
+                    "0"
+                )
+            }
         })
     })
 })
