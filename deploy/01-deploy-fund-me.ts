@@ -22,10 +22,6 @@ module.exports = async (hre: HardhatRuntimeEnvironment) => {
     log("----------------------------------------------------")
     log("Deploying FundMe and waiting for confirmations...")
 
-    console.log(
-        `Waited ${networkConfig[network.name].blockConfirmations} blocks`
-    )
-
     const args = [ethUsdPriceFeedAddress]
     const fundMe = await deploy("FundMe", {
         from: deployer,
