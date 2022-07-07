@@ -1,5 +1,6 @@
-import { networkConfig } from "../helper-hardhat-config"
+import { developmentChains, networkConfig } from "../helper-hardhat-config"
 import { HardhatRuntimeEnvironment } from "hardhat/types"
+import { verify } from "../utils/verify"
 
 module.exports = async (hre: HardhatRuntimeEnvironment) => {
     const { deployments, getNamedAccounts, network } = hre
@@ -17,16 +18,30 @@ module.exports = async (hre: HardhatRuntimeEnvironment) => {
     } else {
         ethUsdPriceFeedAddress = networkConfig[network.name].ethUsdPriceFeed!
     }
+
     log("----------------------------------------------------")
     log("Deploying FundMe and waiting for confirmations...")
 
+    console.log(
+        `Waited ${networkConfig[network.name].blockConfirmations} blocks`
+    )
+
+    const args = [ethUsdPriceFeedAddress]
     const fundMe = await deploy("FundMe", {
         from: deployer,
-        args: [ethUsdPriceFeedAddress], // Constructor arguments
+        args: args, // Constructor arguments
         log: true,
-        waitConfirmations: networkConfig[network.name].blockConfirmations || 0,
+        // waitConfirmations: network.config.blockConfirmations || 1,
+        waitConfirmations: networkConfig[network.name].blockConfirmations || 1,
     })
     log(`FundMe deployed at ${fundMe.address}`)
+
+    if (
+        !developmentChains.includes(network.name) &&
+        process.env.ETHERSCAN_API_KEY
+    ) {
+        await verify(fundMe.address, args)
+    }
 }
 
 module.exports.tags = ["all", "fundMe"]
