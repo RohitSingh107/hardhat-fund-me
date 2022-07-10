@@ -3,7 +3,7 @@
 pragma solidity ^0.8.8;
 
 import "./PriceConverter.sol";
-
+import "hardhat/console.sol";
 error FundMe__NotOwner();
 
 
@@ -46,17 +46,19 @@ contract FundMe {
         fund();
     }
 
-
 	/**
 	 * @notice This function funds this contract
 	 * @dev This implements price feeds as our library
 	 */
     function fund() public payable {
         // require(getConversionRate(msg.value) >= minimumUsd, "Ditn't send enough! reverting changes");
+		console.log("Ether amount is: %s", msg.value);
+		console.log("Converted price is %s and minimumUsd is %s", msg.value.getConversionRate(s_priceFeed), MINIMUM_USD);
         require(
             msg.value.getConversionRate(s_priceFeed) >= MINIMUM_USD,
-            "Ditn't send enough! reverting changes"
-        );
+			"Ditn't send enough! reverting changes"
+
+		);
         s_funders.push(msg.sender);
         s_addressToAmount[msg.sender] = msg.value;
     }
@@ -111,6 +113,19 @@ contract FundMe {
 
 	function getPriceFeed() public view returns (AggregatorV3Interface) {
 		return s_priceFeed;
+	}
+
+	function getPriceFeedConverted(uint256 ethAmount) public view returns(uint256) {
+		return ethAmount.getConversionRate(s_priceFeed);
+	}
+
+	function getMinimumUSD() public pure returns(uint256) {
+		return MINIMUM_USD;
+	}
+
+	function getEthPrice() public view  returns(uint256) {
+		(, int price, , ,) = s_priceFeed.latestRoundData();
+        return uint256(price * 1e10);
 	}
 
 }

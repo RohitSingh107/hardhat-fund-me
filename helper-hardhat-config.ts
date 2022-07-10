@@ -37,8 +37,7 @@ export const networkConfig: networkConfigInfo = {
 
 export const developmentChains = ["hardhat", "localhost"]
 export const DECIMALS = 8
-export const INITIAL_PRICE = 200000000000
-
+export const INITIAL_PRICE = "200000000000"
 // module.exports = {
 //     networkConfig,
 // }

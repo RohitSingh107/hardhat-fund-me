@@ -21,6 +21,5 @@ library PriceConverter{
         uint256 ethPrice = getPrice(priceFeed);
         uint256 ethAmountInUsd = (ethPrice * ethAmount) / 1e18;
         return ethAmountInUsd;
-
 	}
 }
